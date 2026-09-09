@@ -1,0 +1,975 @@
+import { supabase, isSupabaseConfigured } from "./supabase";
+import type {
+  Repuesto,
+  Herramienta,
+  MovimientoInventario,
+  Usuario,
+  Sucursal,
+  CategoriaRepuesto,
+  TipoMovimiento,
+} from "../types";
+import {
+  usuariosIniciales,
+  repuestosIniciales,
+  herramientasIniciales,
+  movimientosIniciales,
+} from "../data";
+
+// Conversión de IDs de sucursal Supabase (1, 2) a tipos de frontend ("sucursal1", "sucursal2")
+export function mapSucursalId(id: number | string): Sucursal {
+  if (id === 1 || id === "1" || id === "sucursal1") return "sucursal1";
+  return "sucursal2";
+}
+
+export function unmapSucursalId(sucursal: Sucursal): number {
+  return sucursal === "sucursal1" ? 1 : 2;
+}
+
+// Sanitizar patrones de búsqueda ILIKE para evitar inyección de comodines (% y _)
+export function sanitizeLikePattern(pattern: string): string {
+  return pattern.replace(/[%_]/g, "\\$&").trim();
+}
+
+// 0. Diagnóstico de Conexión
+export interface ConnectionDiagnostic {
+  ok: boolean;
+  url: string;
+  latencyMs: number;
+  tables: Record<string, { ok: boolean; count: number; error?: string }>;
+  error?: string;
+}
+
+export async function dbProbarConexion(): Promise<ConnectionDiagnostic> {
+  const start = performance.now();
+  const url = import.meta.env.VITE_SUPABASE_URL || "";
+
+  if (!supabase || !isSupabaseConfigured) {
+    return {
+      ok: false,
+      url,
+      latencyMs: 0,
+      tables: {},
+      error: "Credenciales de Supabase no configuradas o incompletas en el archivo .env",
+    };
+  }
+
+  const tablesToCheck = [
+    "sucursales",
+    "categorias_repuestos",
+    "proveedores",
+    "repuestos",
+    "inventario_repuestos",
+    "movimientos_kardex",
+    "herramientas",
+    "usuarios",
+  ];
+
+  const tableResults: Record<string, { ok: boolean; count: number; error?: string }> = {};
+  let anyError = false;
+
+  for (const table of tablesToCheck) {
+    try {
+      const { count, error } = await supabase
+        .from(table)
+        .select("*", { count: "exact", head: true });
+
+      if (error) {
+        tableResults[table] = { ok: false, count: 0, error: error.message };
+        anyError = true;
+      } else {
+        tableResults[table] = { ok: true, count: count ?? 0 };
+      }
+    } catch (err: any) {
+      tableResults[table] = { ok: false, count: 0, error: err?.message || "Error al consultar" };
+      anyError = true;
+    }
+  }
+
+  const latencyMs = Math.round(performance.now() - start);
+
+  return {
+    ok: !anyError,
+    url,
+    latencyMs,
+    tables: tableResults,
+    error: anyError ? "Algunas tablas reportaron errores de consulta." : undefined,
+  };
+}
+
+// 1. Cargar Repuestos desde Supabase
+export async function dbFetchRepuestos(): Promise<Repuesto[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("inventario_repuestos")
+    .select(`
+      id,
+      existencia,
+      stock_minimo,
+      precio_compra,
+      precio_venta,
+      ubicacion_fisica,
+      ultima_compra,
+      sucursal_id,
+      repuesto:repuestos (
+        id,
+        codigo_parte,
+        nombre,
+        marca,
+        categoria:categorias_repuestos (nombre),
+        proveedor:proveedores (razon_social)
+      )
+    `);
+
+  if (error) {
+    console.error("Error al cargar repuestos desde Supabase:", error);
+    throw error;
+  }
+
+  return (data || []).map((row: any) => ({
+    id: String(row.id),
+    nombre: row.repuesto?.nombre || "",
+    codigo: row.repuesto?.codigo_parte || "",
+    categoria: (row.repuesto?.categoria?.nombre || "Otro") as CategoriaRepuesto,
+    marca: row.repuesto?.marca || "",
+    sucursal: mapSucursalId(row.sucursal_id),
+    existencia: row.existencia,
+    stockMinimo: row.stock_minimo,
+    precioCompra: Number(row.precio_compra),
+    precioVenta: Number(row.precio_venta),
+    proveedor: row.repuesto?.proveedor?.razon_social || "",
+    ubicacion: row.ubicacion_fisica || "",
+    fechaUltimaCompra: row.ultima_compra
+      ? new Date(row.ultima_compra).toISOString().split("T")[0]
+      : "",
+  }));
+}
+
+// 2. Insertar Nuevo Repuesto en Supabase
+export async function dbCrearRepuesto(r: Omit<Repuesto, "id">): Promise<string | null> {
+  if (!supabase) return null;
+
+  try {
+    let categoriaId = 10;
+    const safeCat = sanitizeLikePattern(r.categoria);
+    const { data: catData } = await supabase
+      .from("categorias_repuestos")
+      .select("id")
+      .ilike("nombre", safeCat)
+      .limit(1);
+
+    if (catData && catData.length > 0) {
+      categoriaId = catData[0].id;
+    }
+
+    let proveedorId = 1;
+    if (r.proveedor) {
+      const safeProv = sanitizeLikePattern(r.proveedor);
+      const { data: provData } = await supabase
+        .from("proveedores")
+        .select("id")
+        .ilike("razon_social", safeProv)
+        .limit(1);
+
+      if (provData && provData.length > 0) {
+        proveedorId = provData[0].id;
+      } else {
+        const { data: newProv } = await supabase
+          .from("proveedores")
+          .insert({ razon_social: r.proveedor.trim() })
+          .select("id")
+          .single();
+        if (newProv) proveedorId = newProv.id;
+      }
+    }
+
+    let repuestoId: number | null = null;
+    const safeCodigo = sanitizeLikePattern(r.codigo);
+    const { data: existingRep } = await supabase
+      .from("repuestos")
+      .select("id")
+      .ilike("codigo_parte", safeCodigo)
+      .limit(1);
+
+    if (existingRep && existingRep.length > 0) {
+      repuestoId = existingRep[0].id;
+    } else {
+      const { data: newRep, error: repErr } = await supabase
+        .from("repuestos")
+        .insert({
+          categoria_id: categoriaId,
+          proveedor_id: proveedorId,
+          codigo_parte: r.codigo.trim(),
+          nombre: r.nombre.trim(),
+          marca: r.marca.trim(),
+        })
+        .select("id")
+        .single();
+
+      if (repErr || !newRep) {
+        console.error("Error insertando repuesto maestro:", repErr);
+        return null;
+      }
+      repuestoId = newRep.id;
+    }
+
+    const targetSucursalId = unmapSucursalId(r.sucursal);
+
+    const { data: existingInv } = await supabase
+      .from("inventario_repuestos")
+      .select("id")
+      .eq("repuesto_id", repuestoId)
+      .eq("sucursal_id", targetSucursalId)
+      .limit(1);
+
+    if (existingInv && existingInv.length > 0) {
+      const invId = existingInv[0].id;
+      await supabase
+        .from("inventario_repuestos")
+        .update({
+          existencia: r.existencia,
+          stock_minimo: r.stockMinimo,
+          precio_compra: r.precioCompra,
+          precio_venta: r.precioVenta,
+          ubicacion_fisica: r.ubicacion,
+          ultima_compra: r.fechaUltimaCompra || new Date().toISOString().split("T")[0],
+        })
+        .eq("id", invId);
+      return String(invId);
+    }
+
+    const { data: newInv, error: invErr } = await supabase
+      .from("inventario_repuestos")
+      .insert({
+        sucursal_id: targetSucursalId,
+        repuesto_id: repuestoId,
+        existencia: r.existencia,
+        stock_minimo: r.stockMinimo,
+        precio_compra: r.precioCompra,
+        precio_venta: r.precioVenta,
+        ubicacion_fisica: r.ubicacion,
+        ultima_compra: r.fechaUltimaCompra || new Date().toISOString().split("T")[0],
+      })
+      .select("id")
+      .single();
+
+    if (invErr || !newInv) {
+      console.error("Error insertando inventario_repuesto:", invErr);
+      return String(repuestoId);
+    }
+
+    return String(newInv.id);
+  } catch (e) {
+    console.error("Excepción al crear repuesto:", e);
+    return null;
+  }
+}
+
+// 3. Actualizar Repuesto en Supabase
+export async function dbActualizarRepuesto(r: Repuesto): Promise<boolean> {
+  if (!supabase) return false;
+
+  try {
+    const numId = parseInt(r.id);
+    if (isNaN(numId)) return false;
+
+    // A. Actualizar inventario_repuestos y obtener repuesto_id
+    const { data: invData, error: invErr } = await supabase
+      .from("inventario_repuestos")
+      .update({
+        existencia: r.existencia,
+        stock_minimo: r.stockMinimo,
+        precio_compra: r.precioCompra,
+        precio_venta: r.precioVenta,
+        ubicacion_fisica: r.ubicacion,
+        ultima_compra: r.fechaUltimaCompra || null,
+      })
+      .eq("id", numId)
+      .select("repuesto_id")
+      .maybeSingle();
+
+    if (invErr) {
+      console.error("Error al actualizar inventario_repuestos:", invErr);
+      return false;
+    }
+
+    let repuestoId = invData?.repuesto_id;
+
+    if (!repuestoId) {
+      const { data: invSearch } = await supabase
+        .from("inventario_repuestos")
+        .select("repuesto_id")
+        .eq("id", numId)
+        .maybeSingle();
+      repuestoId = invSearch?.repuesto_id;
+    }
+
+    if (repuestoId) {
+      // B. Resolver Categoria ID
+      let categoriaId: number | null = null;
+      if (r.categoria && r.categoria.trim()) {
+        const safeCat = sanitizeLikePattern(r.categoria);
+        const { data: catData } = await supabase
+          .from("categorias_repuestos")
+          .select("id")
+          .ilike("nombre", safeCat)
+          .limit(1);
+
+        if (catData && catData.length > 0) {
+          categoriaId = catData[0].id;
+        } else {
+          const { data: newCat } = await supabase
+            .from("categorias_repuestos")
+            .insert({ nombre: r.categoria.trim() })
+            .select("id")
+            .single();
+          if (newCat) categoriaId = newCat.id;
+        }
+      }
+
+      // C. Resolver Proveedor ID
+      let proveedorId: number | null = null;
+      if (r.proveedor && r.proveedor.trim()) {
+        const safeProv = sanitizeLikePattern(r.proveedor);
+        const { data: provData } = await supabase
+          .from("proveedores")
+          .select("id")
+          .ilike("razon_social", safeProv)
+          .limit(1);
+
+        if (provData && provData.length > 0) {
+          proveedorId = provData[0].id;
+        } else {
+          const { data: newProv } = await supabase
+            .from("proveedores")
+            .insert({ razon_social: r.proveedor.trim() })
+            .select("id")
+            .single();
+          if (newProv) proveedorId = newProv.id;
+        }
+      }
+
+      // D. Actualizar tabla repuestos
+      const { error: repErr } = await supabase
+        .from("repuestos")
+        .update({
+          nombre: r.nombre.trim(),
+          codigo_parte: r.codigo.trim(),
+          marca: r.marca.trim(),
+          categoria_id: categoriaId,
+          proveedor_id: proveedorId,
+        })
+        .eq("id", repuestoId);
+
+      if (repErr) {
+        console.error("Error actualizando la tabla repuestos:", repErr);
+        return false;
+      }
+    }
+
+    return true;
+  } catch (e) {
+    console.error("Error actualizando repuesto:", e);
+    return false;
+  }
+}
+
+// 4. Eliminar Repuesto en Supabase
+export async function dbEliminarRepuesto(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const numId = parseInt(id);
+    if (isNaN(numId)) return false;
+
+    // 1. Obtener repuesto_id asociado
+    const { data: invRow } = await supabase
+      .from("inventario_repuestos")
+      .select("repuesto_id")
+      .eq("id", numId)
+      .maybeSingle();
+
+    const repuestoId = invRow?.repuesto_id;
+
+    // 2. Eliminar referencias en movimientos_kardex para evitar error 409 (Foreign Key Violation)
+    if (repuestoId) {
+      await supabase
+        .from("movimientos_kardex")
+        .delete()
+        .eq("repuesto_id", repuestoId);
+    }
+    await supabase
+      .from("movimientos_kardex")
+      .delete()
+      .eq("inventario_id", numId);
+
+    // 3. Eliminar de inventario_repuestos
+    const { error: invDeleteErr } = await supabase
+      .from("inventario_repuestos")
+      .delete()
+      .eq("id", numId);
+
+    if (invDeleteErr) {
+      console.error("Error eliminando de inventario_repuestos:", invDeleteErr);
+      return false;
+    }
+
+    // 4. Si ninguna otra fila usa este repuesto maestro, eliminar de repuestos
+    if (repuestoId) {
+      const { count } = await supabase
+        .from("inventario_repuestos")
+        .select("id", { count: "exact", head: true })
+        .eq("repuesto_id", repuestoId);
+
+      if (count === 0) {
+        await supabase.from("repuestos").delete().eq("id", repuestoId);
+      }
+    }
+
+    return true;
+  } catch (e) {
+    console.error("Error eliminando repuesto:", e);
+    return false;
+  }
+}
+
+// 5. Registrar Movimiento (Kardex) y actualizar stock en Supabase
+export async function dbRegistrarMovimiento(params: {
+  repuestoId: string;
+  repuestoNombre: string;
+  repuestoCodigo: string;
+  sucursal: Sucursal;
+  tipo: TipoMovimiento;
+  cantidad: number;
+  stockAnterior: number;
+  stockResultante: number;
+  motivo: string;
+  folioReferencia?: string;
+  usuarioId: string;
+  usuarioNombre: string;
+  notas?: string;
+}): Promise<boolean> {
+  if (!supabase) return false;
+
+  const sucursalId = unmapSucursalId(params.sucursal);
+
+  let targetInvId = Number(params.repuestoId);
+  if (isNaN(targetInvId)) {
+    const { data: foundInv } = await supabase
+      .from("inventario_repuestos")
+      .select("id, repuesto_id")
+      .eq("sucursal_id", sucursalId)
+      .limit(1);
+    if (foundInv && foundInv.length > 0) {
+      targetInvId = foundInv[0].id;
+    } else {
+      targetInvId = 1;
+    }
+  }
+
+  const { error: stockError } = await supabase
+    .from("inventario_repuestos")
+    .update({ existencia: params.stockResultante })
+    .eq("id", targetInvId);
+
+  if (stockError) {
+    console.error("Error actualizando stock en Supabase:", stockError);
+  }
+
+  let parsedUserId = Number(params.usuarioId);
+  if (isNaN(parsedUserId)) {
+    const { data: foundUser } = await supabase
+      .from("usuarios")
+      .select("id")
+      .ilike("nombre", params.usuarioNombre)
+      .limit(1);
+    parsedUserId = foundUser && foundUser.length > 0 ? foundUser[0].id : 1;
+  }
+
+  let maestroRepuestoId = 1;
+  const { data: invRow } = await supabase
+    .from("inventario_repuestos")
+    .select("repuesto_id")
+    .eq("id", targetInvId)
+    .single();
+
+  if (invRow?.repuesto_id) {
+    maestroRepuestoId = invRow.repuesto_id;
+  }
+
+  const tipoUpper = params.tipo === "salida" ? "SALIDA" : "ENTRADA";
+  const { error: kardexError } = await supabase.from("movimientos_kardex").insert({
+    repuesto_id: maestroRepuestoId,
+    sucursal_id: sucursalId,
+    usuario_id: parsedUserId,
+    tipo_movimiento: tipoUpper,
+    cantidad: params.cantidad,
+    stock_resultante: params.stockResultante,
+    folio_referencia: params.folioReferencia || null,
+    notas: params.notas || params.motivo || null,
+  });
+
+  if (kardexError) {
+    console.error("Error insertando en movimientos_kardex:", kardexError);
+    return false;
+  }
+
+  return true;
+}
+
+// 6. Cargar Kardex / Movimientos desde Supabase
+export async function dbFetchMovimientos(): Promise<MovimientoInventario[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("movimientos_kardex")
+    .select(`
+      id,
+      tipo_movimiento,
+      cantidad,
+      stock_resultante,
+      folio_referencia,
+      notas,
+      fecha_creacion,
+      sucursal_id,
+      repuesto:repuestos (id, nombre, codigo_parte),
+      usuario:usuarios (id, nombre)
+    `)
+    .order("fecha_creacion", { ascending: false });
+
+  if (error) {
+    console.error("Error cargando kardex:", error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => {
+    const esEntrada = row.tipo_movimiento === "ENTRADA";
+    const fechaDate = new Date(row.fecha_creacion);
+    const fechaStr = `${fechaDate.getFullYear()}-${String(fechaDate.getMonth() + 1).padStart(2, "0")}-${String(fechaDate.getDate()).padStart(2, "0")} ${String(fechaDate.getHours()).padStart(2, "0")}:${String(fechaDate.getMinutes()).padStart(2, "0")}`;
+
+    return {
+      id: String(row.id),
+      repuestoId: String(row.repuesto?.id || ""),
+      repuestoNombre: row.repuesto?.nombre || "Repuesto",
+      repuestoCodigo: row.repuesto?.codigo_parte || "COD",
+      sucursal: mapSucursalId(row.sucursal_id),
+      tipo: esEntrada ? "entrada" : "salida",
+      cantidad: row.cantidad,
+      stockAnterior: esEntrada
+        ? row.stock_resultante - row.cantidad
+        : row.stock_resultante + row.cantidad,
+      stockResultante: row.stock_resultante,
+      motivo: row.notas || (esEntrada ? "Compra / Entrada" : "Venta / Salida"),
+      folioReferencia: row.folio_referencia || undefined,
+      fecha: fechaStr,
+      usuarioId: String(row.usuario?.id || ""),
+      usuarioNombre: row.usuario?.nombre || "Usuario",
+      notas: row.notas || undefined,
+    };
+  });
+}
+
+// 7. Cargar Herramientas desde Supabase
+export async function dbFetchHerramientas(): Promise<Herramienta[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase.from("herramientas").select("*");
+
+  if (error) {
+    console.error("Error cargando herramientas:", error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => ({
+    id: String(row.id),
+    nombre: row.nombre,
+    codigo: row.codigo_unico,
+    categoria: row.categoria,
+    sucursal: mapSucursalId(row.sucursal_id),
+    estado: row.estado,
+    notas: row.notas || undefined,
+  }));
+}
+
+// 8. Crear / Editar / Eliminar Herramienta
+export async function dbCrearHerramienta(h: Omit<Herramienta, "id">): Promise<string | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("herramientas")
+    .insert({
+      sucursal_id: unmapSucursalId(h.sucursal),
+      codigo_unico: h.codigo,
+      nombre: h.nombre,
+      categoria: h.categoria,
+      estado: h.estado,
+      notas: h.notas || null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Error insertando herramienta:", error);
+    return null;
+  }
+  return String(data.id);
+}
+
+export async function dbActualizarHerramienta(h: Herramienta): Promise<boolean> {
+  if (!supabase) return false;
+  const numId = parseInt(h.id);
+  if (isNaN(numId)) return false;
+
+  const { error } = await supabase
+    .from("herramientas")
+    .update({
+      sucursal_id: unmapSucursalId(h.sucursal),
+      codigo_unico: h.codigo,
+      nombre: h.nombre,
+      categoria: h.categoria,
+      estado: h.estado,
+      notas: h.notas || null,
+    })
+    .eq("id", numId);
+
+  return !error;
+}
+
+export async function dbEliminarHerramienta(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  const numId = parseInt(id);
+  if (isNaN(numId)) return false;
+  const { error } = await supabase.from("herramientas").delete().eq("id", numId);
+  return !error;
+}
+
+// 8.5 Autenticar usuario con Supabase Auth nativo
+export async function dbLoginUsuario(
+  email: string,
+  pass: string
+): Promise<{ ok: boolean; usuario?: Usuario; error?: string }> {
+  if (!supabase) return { ok: false, error: "Base de datos Supabase no configurada." };
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  try {
+    // 1. Autenticación oficial usando Supabase Auth nativo
+    let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password: pass,
+    });
+
+    let authUser = authData?.user;
+
+    // 2. Traer el perfil complementario filtrando por auth_id o por email en la tabla usuarios
+    let userData: any = null;
+
+    if (authUser) {
+      const { data: byAuthId } = await supabase
+        .from("usuarios")
+        .select("*")
+        .eq("auth_id", authUser.id)
+        .maybeSingle();
+      if (byAuthId) {
+        userData = byAuthId;
+      }
+    }
+
+    // Fallback: Si no se encontró por auth_id o si Supabase Auth requiere verificación de correo
+    if (!userData) {
+      const { data: byEmail } = await supabase
+        .from("usuarios")
+        .select("*")
+        .ilike("email", cleanEmail)
+        .maybeSingle();
+
+      if (byEmail && (byEmail.password_hash === pass || !byEmail.password_hash)) {
+        userData = byEmail;
+        if (authUser?.id) {
+          try {
+            await supabase
+              .from("usuarios")
+              .update({ auth_id: authUser.id })
+              .eq("id", byEmail.id);
+          } catch {
+            // Ignorar
+          }
+        }
+      }
+    }
+
+    if (!userData) {
+      console.error("Error al autenticar usuario:", authError?.message);
+      return { ok: false, error: "Credenciales incorrectas o usuario inactivo." };
+    }
+
+    if (!userData.activo) {
+      return { ok: false, error: "El usuario se encuentra inactivo." };
+    }
+
+    const u: Usuario = {
+      id: String(userData.id),
+      nombre: userData.nombre,
+      email: userData.email,
+      password: "",
+      rol: userData.rol,
+      sucursal: mapSucursalId(userData.sucursal_id),
+      activo: Boolean(userData.activo),
+    };
+
+    return { ok: true, usuario: u };
+  } catch (err) {
+    console.error("Excepción en dbLoginUsuario:", err);
+    return { ok: false, error: "Error inesperado al conectar con la base de datos." };
+  }
+}
+
+// 9. Cargar y Gestionar Usuarios
+export async function dbFetchUsuarios(): Promise<Usuario[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("usuarios").select("*");
+  if (error) {
+    console.error("Error cargando usuarios:", error);
+    return [];
+  }
+  return (data || []).map((row: any) => ({
+    id: String(row.id),
+    nombre: row.nombre,
+    email: row.email,
+    password: row.password_hash || "123456",
+    rol: row.rol,
+    sucursal: mapSucursalId(row.sucursal_id),
+    activo: Boolean(row.activo),
+  }));
+}
+
+// 10. Crear usuario validado en Supabase Auth y registrado en la BD
+export async function dbCrearUsuario(u: Omit<Usuario, "id">): Promise<string | null> {
+  if (!supabase) return null;
+
+  const cleanEmail = u.email.trim().toLowerCase();
+
+  try {
+    await supabase.rpc("setval_usuarios_seq" as never);
+  } catch {
+    // Si la función RPC no existe, continuamos
+  }
+
+  let authUserId: string | null = null;
+
+  // 1. Crear el usuario en Supabase Authentication
+  try {
+    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password: u.password,
+      options: {
+        data: {
+          nombre: u.nombre.trim(),
+          rol: u.rol,
+          sucursal_id: unmapSucursalId(u.sucursal),
+        },
+      },
+    });
+
+    if (signUpErr) {
+      console.warn("Aviso al crear en Supabase Auth (signUp):", signUpErr.message);
+    } else if (signUpData?.user) {
+      authUserId = signUpData.user.id;
+    }
+  } catch (authEx) {
+    console.warn("Excepción al registrar en Supabase Auth:", authEx);
+  }
+
+  // 2. Insertar perfil en la tabla 'usuarios'
+  const payload: Record<string, unknown> = {
+    sucursal_id: unmapSucursalId(u.sucursal),
+    nombre: u.nombre.trim(),
+    email: cleanEmail,
+    password_hash: u.password,
+    rol: u.rol,
+    activo: u.activo,
+  };
+
+  if (authUserId) {
+    payload.auth_id = authUserId;
+  }
+
+  const { data, error } = await supabase
+    .from("usuarios")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      console.error(
+        "❌ Error de secuencia en tabla 'usuarios': corre este SQL en Supabase SQL Editor:\n" +
+        "SELECT setval(pg_get_serial_sequence('usuarios', 'id'), (SELECT MAX(id) FROM usuarios));"
+      );
+    } else {
+      console.error("Error creando usuario en Supabase:", error);
+    }
+    return null;
+  }
+  return String(data.id);
+}
+
+// 11. Actualizar usuario en Supabase
+export async function dbActualizarUsuario(u: Usuario): Promise<boolean> {
+  if (!supabase) return false;
+  const numId = parseInt(u.id);
+  if (isNaN(numId)) return false;
+  const payload: Record<string, unknown> = {
+    sucursal_id: unmapSucursalId(u.sucursal),
+    nombre: u.nombre,
+    email: u.email,
+    rol: u.rol,
+    activo: u.activo,
+  };
+  if (u.password) payload.password_hash = u.password;
+  const { error } = await supabase.from("usuarios").update(payload).eq("id", numId);
+  if (error) {
+    console.error("Error actualizando usuario en Supabase:", error);
+    return false;
+  }
+  return true;
+}
+
+// 12. Activar / Desactivar usuario en Supabase
+export async function dbToggleUsuario(id: string, activo: boolean): Promise<boolean> {
+  if (!supabase) return false;
+  const numId = parseInt(id);
+  if (isNaN(numId)) return false;
+  const { error } = await supabase.from("usuarios").update({ activo }).eq("id", numId);
+  if (error) {
+    console.error("Error cambiando estado de usuario en Supabase:", error);
+    return false;
+  }
+  return true;
+}
+
+// 13. Eliminar usuario en Supabase de forma permanente
+export async function dbEliminarUsuario(id: string, email?: string): Promise<boolean> {
+  if (!supabase) return false;
+
+  const numId = parseInt(id, 10);
+  const isNum = !isNaN(numId);
+
+  try {
+    let error: any = null;
+    if (isNum) {
+      const res = await supabase.from("usuarios").delete().eq("id", numId);
+      error = res.error;
+    } else {
+      const res = await supabase.from("usuarios").delete().eq("id", id);
+      error = res.error;
+    }
+
+    if (error && email) {
+      const resMail = await supabase.from("usuarios").delete().ilike("email", email.trim());
+      error = resMail.error;
+    }
+
+    if (error && (error.code === "23503" || error.message?.includes("foreign key"))) {
+      console.warn("Desvinculando referencias de Kardex para permitir la eliminación del usuario...");
+      if (isNum) {
+        await supabase.from("movimientos_kardex").update({ usuario_id: null }).eq("usuario_id", numId);
+        const retry = await supabase.from("usuarios").delete().eq("id", numId);
+        error = retry.error;
+      }
+    }
+
+    if (error) {
+      console.error("Error al eliminar usuario en Supabase:", error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Excepción en dbEliminarUsuario:", err);
+    return false;
+  }
+}
+
+// 14. Inicializar / Poblar Base de Datos Completa
+export async function dbSembrarDatosIniciales(): Promise<{ ok: boolean; message: string }> {
+  if (!supabase) return { ok: false, message: "Supabase no está configurado." };
+
+  try {
+    await supabase.from("sucursales").upsert([
+      { id: 1, nombre: "Sucursal Norte - Principal", direccion: "Av. Principal 123, Col. Centro", telefono: "555-0101", activo: true },
+      { id: 2, nombre: "Sucursal Sur - Express", direccion: "Blvd. Sur 456, Col. Industrial", telefono: "555-0202", activo: true },
+    ]);
+
+    await supabase.from("categorias_repuestos").upsert([
+      { id: 1, nombre: "Filtros", descripcion: "Filtros de aceite, aire, gasolina y cabina" },
+      { id: 2, nombre: "Frenos", descripcion: "Pastillas, discos, tambores y líquido de frenos" },
+      { id: 3, nombre: "Lubricantes", descripcion: "Aceites de motor, transmisión y diferenciales" },
+      { id: 4, nombre: "Suspensión", descripcion: "Amortiguadores, resortes, rótulas y terminales" },
+      { id: 5, nombre: "Eléctrico", descripcion: "Baterías, alternadores, marchas y sensores" },
+      { id: 6, nombre: "Motor", descripcion: "Bujías, bandas, empaques y pistones" },
+      { id: 7, nombre: "Transmisión", descripcion: "Embragues, bandas y engranes" },
+      { id: 8, nombre: "Carrocería", descripcion: "Espejos, fascias y manijas" },
+      { id: 9, nombre: "Neumáticos", descripcion: "Llantas, válvulas y rines" },
+      { id: 10, nombre: "Otro", descripcion: "Otros repuestos y accesorios" },
+    ]);
+
+    await supabase.from("proveedores").upsert([
+      { id: 1, razon_social: "Distribuidora Toyota MX", rfc_nit: "DTM200101AA1", telefono: "555-1111", email: "ventas@toyotamx.com" },
+      { id: 2, razon_social: "AutoPartes Norte", rfc_nit: "APN190315BB2", telefono: "555-2222", email: "contacto@autopartesnorte.com" },
+      { id: 3, razon_social: "Lubricantes MX", rfc_nit: "LMX180808CC3", telefono: "555-3333", email: "pedidos@lubricantesmx.com" },
+      { id: 4, razon_social: "Refacciones Premium", rfc_nit: "RPR170601DD4", telefono: "555-4444", email: "info@refaccionespremium.com" },
+      { id: 5, razon_social: "ElectroCar SA", rfc_nit: "ECA160520EE5", telefono: "555-5555", email: "ventas@electrocar.com" },
+      { id: 6, razon_social: "Rendimiento Total", rfc_nit: "RTO210202FF6", telefono: "555-6666", email: "info@rendimientototal.com" },
+      { id: 7, razon_social: "Distribuidora VW MX", rfc_nit: "DVW150910GG7", telefono: "555-7777", email: "ventas@vwmx.com" },
+    ]);
+
+    await supabase.from("usuarios").upsert([
+      { id: 1, sucursal_id: 1, nombre: "Ever leonel", email: "gerente@taller.com", password_hash: "gerente123", rol: "gerente", activo: true },
+    ]);
+
+    await supabase.from("repuestos").upsert([
+      { id: 1, categoria_id: 1, proveedor_id: 1, codigo_parte: "FAC-001", nombre: "Filtro de aceite Toyota Corolla", marca: "Toyota" },
+      { id: 2, categoria_id: 2, proveedor_id: 2, codigo_parte: "PFD-012", nombre: "Pastillas de freno delanteras Nissan", marca: "Brembo" },
+      { id: 3, categoria_id: 3, proveedor_id: 3, codigo_parte: "ACM-030", nombre: "Aceite motor 5W-30 sintético 1L", marca: "Mobil 1" },
+      { id: 4, categoria_id: 4, proveedor_id: 4, codigo_parte: "AMD-024", nombre: "Amortiguador delantero Honda Civic", marca: "Monroe" },
+      { id: 5, categoria_id: 5, proveedor_id: 5, codigo_parte: "BAT-060", nombre: "Batería 12V 60Ah", marca: "Optima" },
+      { id: 6, categoria_id: 6, proveedor_id: 2, codigo_parte: "BUJ-NGK", nombre: "Bujías NGK Platino x4", marca: "NGK" },
+      { id: 7, categoria_id: 1, proveedor_id: 6, codigo_parte: "FAI-KN1", nombre: "Filtro de aire KN High Flow", marca: "K&N" },
+      { id: 8, categoria_id: 5, proveedor_id: 5, codigo_parte: "CBU-UNI", nombre: "Cable de bujía universal", marca: "Bosch" },
+      { id: 9, categoria_id: 1, proveedor_id: 7, codigo_parte: "FAC-VW1", nombre: "Filtro de aceite Volkswagen", marca: "Mann" },
+      { id: 10, categoria_id: 2, proveedor_id: 2, codigo_parte: "LDF-DOT4", nombre: "Líquido de frenos DOT4 500ml", marca: "Motul" },
+      { id: 11, categoria_id: 4, proveedor_id: 4, codigo_parte: "ROT-DEL", nombre: "Rótula delantera inferior", marca: "Moog" },
+      { id: 12, categoria_id: 5, proveedor_id: 5, codigo_parte: "ALT-UNI", nombre: "Alternador 12V 90A", marca: "Denso" },
+    ]);
+
+    await supabase.from("inventario_repuestos").upsert([
+      { id: 1, sucursal_id: 1, repuesto_id: 1, existencia: 24, stock_minimo: 10, precio_compra: 85, precio_venta: 140, ubicacion_fisica: "A1-E2", ultima_compra: "2026-07-15" },
+      { id: 2, sucursal_id: 1, repuesto_id: 2, existencia: 4, stock_minimo: 6, precio_compra: 320, precio_venta: 550, ubicacion_fisica: "B2-E1", ultima_compra: "2026-06-20" },
+      { id: 3, sucursal_id: 1, repuesto_id: 3, existencia: 48, stock_minimo: 20, precio_compra: 95, precio_venta: 165, ubicacion_fisica: "C1-E3", ultima_compra: "2026-08-01" },
+      { id: 4, sucursal_id: 1, repuesto_id: 4, existencia: 2, stock_minimo: 4, precio_compra: 780, precio_venta: 1350, ubicacion_fisica: "D3-E1", ultima_compra: "2026-05-10" },
+      { id: 5, sucursal_id: 1, repuesto_id: 5, existencia: 8, stock_minimo: 5, precio_compra: 1200, precio_venta: 1950, ubicacion_fisica: "E1-E2", ultima_compra: "2026-07-28" },
+      { id: 6, sucursal_id: 1, repuesto_id: 6, existencia: 0, stock_minimo: 8, precio_compra: 210, precio_venta: 380, ubicacion_fisica: "A2-E1", ultima_compra: "2026-04-15" },
+      { id: 7, sucursal_id: 1, repuesto_id: 7, existencia: 6, stock_minimo: 4, precio_compra: 450, precio_venta: 780, ubicacion_fisica: "A1-E3", ultima_compra: "2026-08-10" },
+      { id: 8, sucursal_id: 1, repuesto_id: 8, existencia: 11, stock_minimo: 5, precio_compra: 180, precio_venta: 320, ubicacion_fisica: "E2-E1", ultima_compra: "2026-06-05" },
+      { id: 9, sucursal_id: 2, repuesto_id: 9, existencia: 15, stock_minimo: 8, precio_compra: 90, precio_venta: 155, ubicacion_fisica: "A1-E1", ultima_compra: "2026-07-20" },
+      { id: 10, sucursal_id: 2, repuesto_id: 10, existencia: 22, stock_minimo: 10, precio_compra: 65, precio_venta: 110, ubicacion_fisica: "B1-E2", ultima_compra: "2026-08-05" },
+      { id: 11, sucursal_id: 2, repuesto_id: 11, existencia: 3, stock_minimo: 5, precio_compra: 290, precio_venta: 490, ubicacion_fisica: "D1-E1", ultima_compra: "2026-06-12" },
+      { id: 12, sucursal_id: 2, repuesto_id: 12, existencia: 1, stock_minimo: 2, precio_compra: 1450, precio_venta: 2400, ubicacion_fisica: "E1-E1", ultima_compra: "2026-03-30" },
+    ]);
+
+    await supabase.from("herramientas").upsert([
+      { id: 1, sucursal_id: 1, codigo_unico: "HR-001", nombre: "Escáner Automotriz OBD2", categoria: "Diagnóstico", estado: "disponible", notas: "Actualizado a software 2026" },
+      { id: 2, sucursal_id: 1, codigo_unico: "HR-002", nombre: "Pistola de impacto neumática 1/2\"", categoria: "Neumática", estado: "en_uso", notas: "Asignada a bahía 2" },
+      { id: 3, sucursal_id: 1, codigo_unico: "HR-003", nombre: "Gato hidráulico de patín 3 Ton", categoria: "Elevación", estado: "disponible" },
+      { id: 4, sucursal_id: 1, codigo_unico: "HR-004", nombre: "Juego de llaves combinadas 8-24mm", categoria: "Manual", estado: "disponible" },
+      { id: 5, sucursal_id: 1, codigo_unico: "HR-005", nombre: "Compresor de resortes de amortiguador", categoria: "Especial", estado: "mantenimiento", notas: "En revisión de rosca" },
+      { id: 6, sucursal_id: 2, codigo_unico: "HR-006", nombre: "Escáner Multimarca Pro", categoria: "Diagnóstico", estado: "disponible" },
+      { id: 7, sucursal_id: 2, codigo_unico: "HR-007", nombre: "Torquímetro 1/2\" 20-150 ft-lb", categoria: "Medición", estado: "disponible", notas: "Calibrado julio 2026" },
+      { id: 8, sucursal_id: 2, codigo_unico: "HR-008", nombre: "Rampa hidráulica de 2 postes", categoria: "Elevación", estado: "en_uso", notas: "Bahía 1" },
+    ]);
+
+    return { ok: true, message: "Datos iniciales sembrados con éxito en Supabase." };
+  } catch (err: any) {
+    console.error("Error al sembrar datos iniciales:", err);
+    return { ok: false, message: err?.message || "Error al poblar la base de datos." };
+  }
+}
