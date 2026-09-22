@@ -44,6 +44,8 @@ interface AppState {
   herramientas: Herramienta[];
   movimientos: MovimientoInventario[];
   vistaActual: View;
+  tema: "oscuro" | "claro";
+  toggleTema: () => void;
   supabaseConectado: boolean;
   sincronizando: boolean;
   diagnostico: ConnectionDiagnostic | null;
@@ -133,6 +135,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [herramientas, setHerramientas] = useState<Herramienta[]>(herramientasIniciales);
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>(movimientosIniciales);
   const [vistaActual, setVistaActual] = useState<View>("dashboard");
+  const [tema, setTema] = useState<"oscuro" | "claro">(() => {
+    try {
+      const saved = localStorage.getItem("genesis_tema_modo");
+      if (saved === "claro" || saved === "oscuro") return saved;
+    } catch {}
+    return "oscuro";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("genesis_tema_modo", tema);
+      if (tema === "claro") {
+        document.documentElement.setAttribute("data-theme", "light");
+      } else {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    } catch {}
+  }, [tema]);
+
+  const toggleTema = useCallback(() => {
+    setTema((t) => (t === "oscuro" ? "claro" : "oscuro"));
+  }, []);
+
   const [supabaseConectado, setSupabaseConectado] = useState(isSupabaseConfigured);
   const [sincronizando, setSincronizando] = useState(false);
   const [diagnostico, setDiagnostico] = useState<ConnectionDiagnostic | null>(null);
@@ -541,6 +566,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         herramientas,
         movimientos,
         vistaActual,
+        tema,
+        toggleTema,
         supabaseConectado,
         sincronizando,
         diagnostico,

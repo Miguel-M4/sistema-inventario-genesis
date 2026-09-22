@@ -76,6 +76,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setVista,
     logout,
     repuestos,
+    tema,
+    toggleTema,
   } = useApp();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -120,6 +122,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </span>
           </div>
         </div>
+
+        <button
+          onClick={toggleTema}
+          title={tema === "oscuro" ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+          className="p-1.5 rounded-md hover:bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+        >
+          {tema === "oscuro" ? (
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-amber-400">
+              <path d="M10 2a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 2Zm0 13a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 15Zm-8-5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 2 10Zm13 0a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 15 10Zm-10.364-5.636a.75.75 0 0 1 1.06 0l1.061 1.06a.75.75 0 0 1-1.06 1.06l-1.06-1.06a.75.75 0 0 1 0-1.06Zm9.193 9.193a.75.75 0 0 1 1.06 0l1.06 1.061a.75.75 0 0 1-1.06 1.06l-1.06-1.061a.75.75 0 0 1 0-1.06ZM4.636 15.364a.75.75 0 0 1 0-1.06l1.06-1.061a.75.75 0 1 1 1.061 1.06l-1.06 1.061a.75.75 0 0 1-1.061 0Zm9.193-9.193a.75.75 0 0 1 0-1.06l1.061-1.06a.75.75 0 0 1 1.06 1.06l-1.06 1.061a.75.75 0 0 1-1.061 0ZM10 6.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-indigo-500">
+              <path fillRule="evenodd" d="M7.455 2.004a.75.75 0 0 1 .862.243 7.5 7.5 0 0 0 10.436 10.436.75.75 0 0 1 1.006.96 9.5 9.5 0 1 1-12.063-12.063a.75.75 0 0 1 .759.424Z" clipRule="evenodd" />
+            </svg>
+          )}
+        </button>
       </header>
 
       {/* Fondo Traslúcido Móvil */}
@@ -229,8 +247,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Perfil / Cierre de Sesión */}
-        <div className="p-3 border-t border-[var(--border)] shrink-0">
+        {/* Perfil / Alternar Tema / Cierre de Sesión */}
+        <div className="p-3 border-t border-[var(--border)] shrink-0 space-y-2">
+          {/* Botón de Cambiar Tema (Oscuro / Claro) */}
+          <button
+            onClick={toggleTema}
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium bg-[var(--secondary)] border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors ${!sidebarOpen ? "md:justify-center" : ""}`}
+            title={tema === "oscuro" ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+          >
+            <div className="flex items-center gap-2">
+              {tema === "oscuro" ? (
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-amber-400 shrink-0">
+                  <path d="M10 2a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 2Zm0 13a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 15Zm-8-5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 2 10Zm13 0a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 15 10Zm-10.364-5.636a.75.75 0 0 1 1.06 0l1.061 1.06a.75.75 0 0 1-1.06 1.06l-1.06-1.06a.75.75 0 0 1 0-1.06Zm9.193 9.193a.75.75 0 0 1 1.06 0l1.06 1.061a.75.75 0 0 1-1.06 1.06l-1.06-1.061a.75.75 0 0 1 0-1.06ZM4.636 15.364a.75.75 0 0 1 0-1.06l1.06-1.061a.75.75 0 1 1 1.061 1.06l-1.06 1.061a.75.75 0 0 1-1.061 0Zm9.193-9.193a.75.75 0 0 1 0-1.06l1.061-1.06a.75.75 0 0 1 1.06 1.06l-1.06 1.061a.75.75 0 0 1-1.061 0ZM10 6.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-indigo-500 shrink-0">
+                  <path fillRule="evenodd" d="M7.455 2.004a.75.75 0 0 1 .862.243 7.5 7.5 0 0 0 10.436 10.436.75.75 0 0 1 1.006.96 9.5 9.5 0 1 1-12.063-12.063a.75.75 0 0 1 .759.424Z" clipRule="evenodd" />
+                </svg>
+              )}
+              <span className={`${!sidebarOpen ? "md:hidden" : ""}`}>
+                {tema === "oscuro" ? "Modo claro" : "Modo oscuro"}
+              </span>
+            </div>
+          </button>
+
           <div className={`flex items-center gap-2.5 ${!sidebarOpen ? "md:hidden" : ""}`}>
             <div className="w-7 h-7 rounded-full bg-[var(--primary)]/20 flex items-center justify-center shrink-0">
               <span className="text-xs font-semibold text-[var(--primary)]">
@@ -270,7 +310,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Contenido Principal */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto w-full p-4 md:p-6">
-        {children}
+        <div className="flex-1 flex flex-col min-w-0">
+          {children}
+        </div>
+        <footer style={{ textAlign: "center", padding: "1rem", fontSize: "0.9rem" }} className="text-[var(--muted-foreground)] mt-6 shrink-0 border-t border-[var(--border)]">
+          <p>© 2026 Sistema. Desarrollado por estudiantes de la <strong>Universidad Luterana Salvadoreña (ULS)</strong>.</p>
+        </footer>
       </main>
     </div>
   );
