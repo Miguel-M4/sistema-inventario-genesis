@@ -4,6 +4,17 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 import fs from 'node:fs'
 
+const securityHeaders = {
+  'Strict-Transport-Security': 'max-age=31536000',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Content-Security-Policy':
+    "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'sha256-GkvshF2dj5MTrGukEFmtqdJAegsIlay5j7HyjzTWFT0='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.emailjs.com; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'; form-action 'self'; require-trusted-types-for 'script'; trusted-types dompurify genesis-service-worker; upgrade-insecure-requests",
+}
+
 let siteConfiguration: FigmaSiteConfiguration = {}
 try {
   const siteJsonPath = path.resolve(__dirname, './.figma/make/site.json')
@@ -49,6 +60,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
       allowedHosts: true,
+      headers: securityHeaders,
     },
   }
 })
