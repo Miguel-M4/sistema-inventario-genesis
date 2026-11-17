@@ -97,9 +97,9 @@ export default function Respaldo() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto p-6">
-        <header className="mb-8">
-          <h1 className="font-display text-2xl text-[var(--foreground)]">Respaldo de datos</h1>
+      <div className="max-w-5xl mx-auto px-3 py-4 sm:p-6">
+        <header className="mb-6 sm:mb-8">
+          <h1 className="font-display text-xl sm:text-2xl text-[var(--foreground)]">Respaldo de datos</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-1">
             Descarga una copia de la base de datos o prepara una tabla para editarla en Google Sheets.
           </p>
@@ -117,7 +117,7 @@ export default function Respaldo() {
               type="button"
               onClick={crearRespaldoSQL}
               disabled={generando !== null}
-              className="btn-primary shrink-0 disabled:opacity-60"
+              className="btn-primary w-full sm:w-auto shrink-0 disabled:opacity-60"
             >
               {generando === "sql" ? "Generando..." : "Descargar respaldo SQL"}
             </button>
@@ -151,14 +151,14 @@ export default function Respaldo() {
                   }
                 }}
                 disabled={generando !== null}
-                className="max-w-full text-sm text-[var(--muted-foreground)] file:mr-3 file:rounded-md file:border file:border-[var(--border)] file:bg-[var(--card)] file:px-3 file:py-2 file:text-sm file:text-[var(--foreground)]"
+                className="max-w-full text-xs sm:text-sm text-[var(--muted-foreground)] file:mr-2 sm:file:mr-3 file:rounded-md file:border file:border-[var(--border)] file:bg-[var(--card)] file:px-2 sm:file:px-3 file:py-2 file:text-xs sm:file:text-sm file:text-[var(--foreground)]"
               />
             </label>
             <button
               type="button"
               onClick={() => setConfirmarRestauracion(true)}
               disabled={!archivoRespaldo || generando !== null}
-              className="btn-primary shrink-0 disabled:opacity-60"
+              className="btn-primary w-full sm:w-auto shrink-0 disabled:opacity-60"
             >
               {generando === "restaurar" ? "Restaurando..." : "Restaurar respaldo"}
             </button>

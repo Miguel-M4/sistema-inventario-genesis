@@ -31,7 +31,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse({ ok: false, error: "Sesión no autorizada." }, 401);
   }
   if (!instanceId || !token) {
-    return jsonResponse({ ok: false, error: "WhatsApp no está configurado en el servidor." }, 503);
+    return jsonResponse({ ok: false, error: "UltraMsg no está configurado en el servidor." }, 503);
   }
 
   const userClient = createClient(supabaseUrl, supabaseAnonKey, {
@@ -67,8 +67,8 @@ Deno.serve(async (request: Request) => {
   if (
     (body.tipo !== "prueba" && body.tipo !== "alerta") ||
     typeof body.destinatario !== "string" ||
-    body.destinatario.length < 5 ||
-    body.destinatario.length > 100 ||
+    !(/^\d{8,15}$/.test(body.destinatario) ||
+      /^\d{5,30}(?:-\d{1,20})?@g\.us$/.test(body.destinatario)) ||
     typeof body.mensaje !== "string" ||
     body.mensaje.length === 0 ||
     body.mensaje.length > 4000
@@ -96,13 +96,40 @@ Deno.serve(async (request: Request) => {
         signal: AbortSignal.timeout(15000),
       },
     );
-    const result = await response.json().catch(() => null);
-    if (!response.ok || result?.error) {
-      console.error("UltraMsg rechazó el envío:", response.status);
-      return jsonResponse({ ok: false, error: "UltraMsg no pudo enviar el mensaje." }, 502);
+    const responseText = await response.text();
+    let result: { sent?: unknown; error?: unknown; message?: unknown; id?: unknown } | null = null;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = null;
     }
 
-    return jsonResponse({ ok: true, messageId: result?.id });
+    if (!response.ok) {
+      console.error("UltraMsg rechazó el envío:", response.status);
+      return jsonResponse({
+        ok: false,
+        error: `UltraMsg respondió con HTTP ${response.status}. Verifica el estado de la instancia y sus credenciales.`,
+      }, 502);
+    }
+
+    if (
+      !result ||
+      result.error ||
+      (result.sent !== true && result.sent !== "true")
+    ) {
+      console.error("UltraMsg no confirmó el envío:", response.status, responseText.slice(0, 300));
+      return jsonResponse({
+        ok: false,
+        error: typeof result?.message === "string"
+          ? `UltraMsg: ${result.message}`
+          : "UltraMsg no confirmó el envío. Verifica que la instancia esté autenticada y que los secretos sean correctos.",
+      }, 502);
+    }
+
+    return jsonResponse({
+      ok: true,
+      messageId: typeof result.id === "string" ? result.id : undefined,
+    });
   } catch (error) {
     console.error("Fallo al contactar UltraMsg:", error);
     return jsonResponse({ ok: false, error: "No se pudo contactar UltraMsg." }, 502);

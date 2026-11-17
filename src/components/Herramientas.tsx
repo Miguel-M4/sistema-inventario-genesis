@@ -47,7 +47,8 @@ function Modal({
             </svg>
           </button>
         </div>
-        <div className="p-5 space-y-3">
+    
+        <div className="max-h-[70dvh] overflow-y-auto p-4 sm:p-5 space-y-3">
           <div>
             <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Nombre *</label>
             <input value={form.nombre} onChange={(e) => set("nombre", e.target.value)} className="input-field" placeholder="Llave de impacto 1/2&quot;" />
@@ -89,7 +90,7 @@ function Modal({
             <input value={form.notas || ""} onChange={(e) => set("notas", e.target.value)} className="input-field" placeholder="Observaciones..." />
           </div>
         </div>
-        <div className="flex justify-end gap-2 px-5 py-4 border-t border-[var(--border)]">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 px-4 sm:px-5 py-4 border-t border-[var(--border)]">
           <button onClick={onClose} className="btn-secondary">Cancelar</button>
           <button onClick={() => { if (form.nombre) onSave({ ...form, precio: Math.max(0, Number(precio) || 0) }); }} className="btn-primary">Guardar</button>
         </div>
@@ -345,15 +346,15 @@ export default function Herramientas() {
         </div>
       )}
 
-      <div className="p-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-5">
+      <div className="px-3 py-4 sm:p-6 max-w-6xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <h1 className="font-display text-2xl text-[var(--foreground)]">Herramientas / Mobiliario</h1>
+            <h1 className="font-display text-xl sm:text-2xl text-[var(--foreground)]">Herramientas / Mobiliario</h1>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">Control de uso, reparación y valor del inventario</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             {esGerente && (
-              <button onClick={generarPdfContable} className="btn-secondary flex items-center gap-2">
+              <button onClick={generarPdfContable} className="btn-secondary flex items-center justify-center gap-2 w-full sm:w-auto">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                   <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                 </svg>
@@ -361,7 +362,7 @@ export default function Herramientas() {
               </button>
             )}
 
-            <button onClick={() => setModal({ tipo: "nuevo", data: { ...EMPTY, sucursal: esGerente ? sucursalTab : usuarioActual.sucursal } })} className="btn-primary flex items-center gap-2">
+            <button onClick={() => setModal({ tipo: "nuevo", data: { ...EMPTY, sucursal: esGerente ? sucursalTab : usuarioActual.sucursal } })} className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto">
               <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
               Nueva herramienta
             </button>
@@ -369,9 +370,9 @@ export default function Herramientas() {
         </div>
 
         {esGerente && (
-          <div className="flex gap-1 bg-[var(--secondary)] p-1 rounded-lg w-fit mb-5">
+          <div className="flex max-w-full overflow-x-auto gap-1 bg-[var(--secondary)] p-1 rounded-lg w-fit mb-5">
             {(["sucursal1", "sucursal2"] as const).map((s) => (
-              <button key={s} onClick={() => setSucursalTab(s)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${sucursalTab === s ? "bg-[var(--card)] text-[var(--foreground)]" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}>
+              <button key={s} onClick={() => setSucursalTab(s)} className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${sucursalTab === s ? "bg-[var(--card)] text-[var(--foreground)]" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}>
                 {SUCURSALES[s]}
               </button>
             ))}
@@ -399,21 +400,21 @@ export default function Herramientas() {
         </div>
 
         <div className="flex flex-wrap gap-3 mb-4">
-          <div className="flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
+          <div className="max-w-full overflow-x-auto flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
             {ESTADOS_FILTRO.map((e) => (
               <button key={e} onClick={() => setFiltroEstado(e)} className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${filtroEstado === e ? "bg-[var(--card)] text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}`}>
                 {estadoLabels[e]}
               </button>
             ))}
           </div>
-          <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="input-field w-auto">
+          <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="input-field w-full sm:w-auto">
             {categorias.map((c) => <option key={c}>{c}</option>)}
           </select>
           <div className="relative flex-1 min-w-48">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]">
               <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
             </svg>
-            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar herramienta..." className="input-field pl-9" />
+            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar herramienta..." className="input-field input-field-with-icon" />
           </div>
         </div>
 

@@ -72,7 +72,6 @@ async function enviarPorFuncion(
   if (!supabase) {
     return { ok: false, error: "Supabase no está configurado." };
   }
-
   const to = sanitizarDestinatario(destinatario, tipoDestinatario);
   if (!to) {
     return { ok: false, error: "Destinatario no especificado o formato inválido." };
@@ -84,7 +83,46 @@ async function enviarPorFuncion(
 
   if (error) {
     console.error("Error al invocar la función segura de WhatsApp:", error);
-    return { ok: false, error: "No se pudo contactar el servicio seguro de WhatsApp." };
+    const response =
+      typeof error === "object" &&
+      error !== null &&
+      "context" in error &&
+      error.context instanceof Response
+        ? error.context
+        : null;
+
+    if (response) {
+      let detalle = "";
+      try {
+        const body: unknown = await response.clone().json();
+        if (
+          typeof body === "object" &&
+          body !== null &&
+          "error" in body &&
+          typeof body.error === "string"
+        ) {
+          detalle = body.error;
+        }
+      } catch {
+        detalle = "";
+      }
+
+      if (response.status === 404) {
+        return {
+          ok: false,
+          error: "No se encontró la función whatsapp-send. Despliégala en este proyecto de Supabase.",
+        };
+      }
+      return {
+        ok: false,
+        error: detalle || `La función de WhatsApp respondió con HTTP ${response.status}.`,
+      };
+    }
+
+    return {
+      ok: false,
+      error: `No se pudo conectar con la función de WhatsApp: ${error.message}`,
+    };
   }
 
   if (!data?.ok) {
@@ -97,7 +135,7 @@ async function enviarPorFuncion(
   return { ok: true, messageId: data.messageId ? String(data.messageId) : undefined };
 }
 
-export async function enviarAlertaStockCero(
+export async function enviarAlertaStock(
   payload: WhatsAppNotificationPayload,
   configOverride?: Partial<WhatsAppConfig>
 ): Promise<WhatsAppSendResult> {
@@ -109,19 +147,23 @@ export async function enviarAlertaStockCero(
 
   const sucursalTexto =
     payload.sucursal === "sucursal1" ? "Sucursal 1 - Central" : "Sucursal 2 - Norte";
+  const agotado = payload.stockResultante <= 0;
   const mensaje = [
-    "🚨 *¡ALERTA DE STOCK AGOTADO!* 🚨",
+    agotado ? "🚨 *¡ALERTA DE PRODUCTO AGOTADO!* 🚨" : "⚠️ *¡ALERTA DE STOCK BAJO!*",
     "━━━━━━━━━━━━━━━━━━━━━━",
     `📦 *Producto:* ${payload.repuestoNombre}`,
     `🏷️ *Código:* ${payload.repuestoCodigo}`,
     `🏢 *Sucursal:* ${sucursalTexto}`,
-    `📉 *Stock resultante:* ${payload.stockResultante} unidades`,
+    `📉 *Stock actual:* ${payload.stockResultante} unidades`,
+    ...(!agotado ? [`📊 *Stock mínimo:* ${payload.stockMinimo} unidades`] : []),
     `📉 *Cantidad descontada:* ${payload.cantidadSalida}`,
     `👤 *Operador:* ${payload.usuarioNombre}`,
     `📝 *Motivo:* ${payload.motivo}${payload.folioReferencia ? ` (Folio: ${payload.folioReferencia})` : ""}`,
     `⏰ *Fecha:* ${payload.fecha}`,
     "━━━━━━━━━━━━━━━━━━━━━━",
-    "⚠️ *Acción:* El producto está agotado. Se requiere gestionar reabastecimiento.",
+    agotado
+      ? "⚠️ *Acción:* El producto está agotado. Se requiere gestionar reabastecimiento."
+      : "⚠️ *Acción:* El producto alcanzó su stock mínimo. Se recomienda gestionar reabastecimiento.",
   ].join("\n");
 
   return enviarPorFuncion(

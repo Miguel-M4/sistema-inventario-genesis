@@ -50,11 +50,11 @@ export default function Movimientos() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <h1 className="font-display text-2xl text-[var(--foreground)]">
+            <h1 className="font-display text-xl sm:text-2xl text-[var(--foreground)]">
               Kardex y Movimientos
             </h1>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
@@ -62,12 +62,12 @@ export default function Movimientos() {
             </p>
           </div>
           {esGerente && (
-            <div className="flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
+            <div className="flex max-w-full overflow-x-auto gap-1 bg-[var(--secondary)] p-1 rounded-lg">
               {(["todas", "sucursal1", "sucursal2"] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setSucursalTab(s)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                     sucursalTab === s
                       ? "bg-[var(--card)] text-[var(--foreground)]"
                       : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
@@ -143,16 +143,16 @@ export default function Movimientos() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por repuesto, código, motivo o folio..."
-              className="input-field pl-9"
+              className="input-field input-field-with-icon"
             />
           </div>
 
-          <div className="flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
+          <div className="max-w-full overflow-x-auto flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
             {(["todos", "entrada", "salida"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTipoFiltro(t)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${
+                className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${
                   tipoFiltro === t
                     ? "bg-[var(--card)] text-[var(--foreground)]"
                     : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
@@ -167,7 +167,7 @@ export default function Movimientos() {
         {/* Table */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[900px] text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--secondary)]/30">
                   {[
@@ -311,7 +311,7 @@ export default function Movimientos() {
         </div>
 
         {/* Paginación Movimientos */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 px-1">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4 px-1">
           <p className="text-xs text-[var(--muted-foreground)]">
             Mostrando {filtrados.length === 0 ? 0 : (paginaValida - 1) * elementosPorPagina + 1} a{" "}
             {Math.min(paginaValida * elementosPorPagina, filtrados.length)} de {filtrados.length} movimientos

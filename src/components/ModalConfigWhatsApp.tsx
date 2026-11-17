@@ -24,7 +24,7 @@ export default function ModalConfigWhatsApp({
 
   useEffect(() => {
     if (isOpen) {
-      setForm(configActual);
+      setForm({ ...configActual, tipoDestinatario: "individual" });
       setResultadoPrueba(null);
     }
   }, [isOpen, configActual]);
@@ -40,7 +40,7 @@ export default function ModalConfigWhatsApp({
         setResultadoPrueba({
           tipo: "exito",
           mensaje:
-            "¡Mensaje de prueba enviado exitosamente a WhatsApp! Revisa tu chat para confirmarlo.",
+            "UltraMsg aceptó la solicitud. Revisa WhatsApp para confirmar que el mensaje llegó.",
         });
       } else {
         setResultadoPrueba({
@@ -77,10 +77,10 @@ export default function ModalConfigWhatsApp({
             </div>
             <div>
               <h2 className="text-lg font-bold text-[var(--foreground)]">
-                Alertas por WhatsApp
+                Alertas de WhatsApp con UltraMsg
               </h2>
               <p className="text-xs text-[var(--muted-foreground)]">
-                Notificación automática cuando el stock de un producto llegue a cero
+                Recibe un aviso automático cuando un producto se agote o alcance el mínimo.
               </p>
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function ModalConfigWhatsApp({
         </div>
 
         {/* Formulario con Scroll */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {/* Activar / Desactivar Switch */}
           <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--accent)]/50 border border-[var(--border)]">
             <div className="space-y-0.5 pr-4">
@@ -106,7 +106,7 @@ export default function ModalConfigWhatsApp({
                 Habilitar alertas automáticas
               </label>
               <p className="text-xs text-[var(--muted-foreground)]">
-                Envía un WhatsApp inmediatamente cuando una venta o salida deje el inventario en 0.
+                Envía un WhatsApp al agotarse el producto. El aviso de stock mínimo se puede activar abajo.
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -121,37 +121,34 @@ export default function ModalConfigWhatsApp({
             </label>
           </div>
 
-          {/* Guía Rápida UltraMsg */}
+          {/* Guía de configuración de UltraMsg */}
           <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 space-y-1.5">
             <div className="flex items-center gap-1.5 font-semibold text-blue-200">
               <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-blue-400">
                 <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clipRule="evenodd" />
               </svg>
-              <span>Conexión mediante código QR (UltraMsg):</span>
+              <span>Configura UltraMsg:</span>
             </div>
             <p className="text-[11px] leading-relaxed text-blue-300/90">
-              1. Crea una instancia gratuita en{" "}
+              1. Crea una instancia en{" "}
               <a
                 href="https://ultramsg.com"
                 target="_blank"
                 rel="noreferrer"
                 className="underline font-semibold hover:text-white"
               >
-                ultramsg.com
+                UltraMsg
               </a>
-              .<br />
-              2. Escanea el código QR con el WhatsApp de tu teléfono.<br />
-              3. Guarda <strong>Instance ID</strong> y <strong>Token</strong> como secretos de la Edge Function en Supabase. No los pegues en esta pantalla.
+              {" "}y escanea el QR hasta que la instancia aparezca autenticada.<br />
+              2. En Supabase, guarda <strong>Instance ID</strong> y <strong>Token</strong> como secretos: <code>ULTRAMSG_INSTANCE_ID</code> y <code>ULTRAMSG_TOKEN</code>.<br />
+              3. Despliega la función <code>whatsapp-send</code>.
             </p>
           </div>
 
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-            Las credenciales no se guardan en el navegador. Configúralas en Supabase como secretos
-            <code className="mx-1">ULTRAMSG_INSTANCE_ID</code> y
-            <code className="mx-1">ULTRAMSG_TOKEN</code>.
+            No pegues las credenciales de UltraMsg aquí. Guárdalas únicamente como secretos en Supabase.
           </div>
 
-          {/* Tipo de Destinatario */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-[var(--foreground)]">
               Tipo de Destinatario
@@ -166,7 +163,7 @@ export default function ModalConfigWhatsApp({
                     : "bg-[var(--background)] border-[var(--border)] text-[var(--muted-foreground)] hover:border-slate-500"
                 }`}
               >
-                📱 Número Personal / Admin
+                Número individual
               </button>
               <button
                 type="button"
@@ -177,7 +174,7 @@ export default function ModalConfigWhatsApp({
                     : "bg-[var(--background)] border-[var(--border)] text-[var(--muted-foreground)] hover:border-slate-500"
                 }`}
               >
-                👥 Grupo de WhatsApp
+                Grupo de WhatsApp
               </button>
             </div>
           </div>
@@ -187,8 +184,8 @@ export default function ModalConfigWhatsApp({
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-[var(--foreground)]">
                 {form.tipoDestinatario === "individual"
-                  ? "Número de Teléfono (con código de país) *"
-                  : "Chat ID del Grupo de WhatsApp *"}
+                  ? "Número de teléfono (con código de país) *"
+                  : "Chat ID del grupo de WhatsApp *"}
               </label>
               <span className="text-[10px] text-[var(--muted-foreground)]">
                 {form.tipoDestinatario === "individual"
@@ -200,8 +197,8 @@ export default function ModalConfigWhatsApp({
               type="text"
               placeholder={
                 form.tipoDestinatario === "individual"
-                  ? "50212345678 (código país + número sin espacios ni signos)"
-                  : "1203630283921829@g.us"
+                  ? "Código de país + número, sin espacios ni signos"
+                  : "ID de grupo terminado en @g.us"
               }
               value={form.destinatario}
               onChange={(e) => setForm({ ...form, destinatario: e.target.value.trim() })}
@@ -209,7 +206,7 @@ export default function ModalConfigWhatsApp({
             />
             {form.tipoDestinatario === "grupo" && (
               <p className="text-[11px] text-[var(--muted-foreground)] mt-1">
-                Tip: En el panel de UltraMsg &gt; pestaña <em>Chats</em> verás los Chat IDs de tus grupos terminados en <code>@g.us</code>.
+                Puedes consultar el Chat ID del grupo en la sección Chats de UltraMsg.
               </p>
             )}
           </div>
@@ -229,7 +226,7 @@ export default function ModalConfigWhatsApp({
               htmlFor="notificarStockMinimo"
               className="text-xs text-[var(--foreground)] cursor-pointer select-none"
             >
-              Alertar también cuando un producto alcance su stock mínimo de seguridad
+              Alertar también cuando el stock baje al mínimo de seguridad definido para el producto
             </label>
           </div>
 

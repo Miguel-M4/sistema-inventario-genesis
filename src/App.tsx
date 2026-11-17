@@ -11,6 +11,7 @@ import Reportes from "./components/Reportes";
 import Usuarios from "./components/Usuarios";
 import Ayuda from "./components/Ayuda";
 import Respaldo from "./components/Respaldo";
+import Desarrolladores from "./components/Desarrolladores";
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -76,6 +77,7 @@ function AppContent() {
     herramientas: <Herramientas />,
     reportes: <Reportes />,
     usuarios: <Usuarios />,
+    desarrolladores: <Desarrolladores />,
     respaldo: <Respaldo />,
     ayuda: <Ayuda />,
   };
@@ -96,4 +98,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-

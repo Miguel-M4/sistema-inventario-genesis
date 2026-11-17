@@ -666,7 +666,7 @@ export default function Inventario() {
         </div>
       )}
 
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
@@ -743,13 +743,13 @@ export default function Inventario() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por nombre, código de parte, marca o ubicación..."
-              className="input-field pl-9"
+              className="input-field input-field-with-icon"
             />
           </div>
           <select
             value={categoriaFiltro}
             onChange={(e) => setCategoriaFiltro(e.target.value)}
-            className="input-field w-auto"
+            className="input-field w-full sm:w-auto"
           >
             {categorias.map((c) => (
               <option key={c}>{c}</option>
@@ -758,7 +758,7 @@ export default function Inventario() {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
           {[
             { label: "Total repuestos", value: repuestosSucursal.length, color: "" },
             {
@@ -776,9 +776,9 @@ export default function Inventario() {
           ].map((s) => (
             <div
               key={s.label}
-              className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-3 flex items-center justify-between"
+              className="min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 sm:px-4 py-3 flex items-center justify-between gap-2"
             >
-              <span className="text-xs text-[var(--muted-foreground)]">{s.label}</span>
+              <span className="text-[11px] sm:text-xs leading-tight text-[var(--muted-foreground)]">{s.label}</span>
               <span className={`font-mono-data font-bold text-lg ${s.color || "text-[var(--foreground)]"}`}>
                 {s.value}
               </span>
@@ -789,7 +789,7 @@ export default function Inventario() {
         {/* Table (sin margen) */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[850px] text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--secondary)]/30">
                   {[

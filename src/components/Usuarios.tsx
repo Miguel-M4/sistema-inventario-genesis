@@ -58,7 +58,7 @@ function Modal({
             </svg>
           </button>
         </div>
-        <div className="p-5 space-y-3">
+        <div className="max-h-[70dvh] overflow-y-auto p-4 sm:p-5 space-y-3">
           <div>
             <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Nombre completo *</label>
             <input value={form.nombre} onChange={(e) => set("nombre", e.target.value)} className="input-field" placeholder="Nombre del empleado" />
@@ -113,7 +113,7 @@ function Modal({
             </p>
           )}
         </div>
-        <div className="flex justify-end gap-2 px-5 py-4 border-t border-[var(--border)]">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 px-4 sm:px-5 py-4 border-t border-[var(--border)]">
           <button onClick={onClose} className="btn-secondary">Cancelar</button>
           <button
             onClick={guardar}
@@ -250,18 +250,18 @@ export default function Usuarios() {
         );
       })()}
 
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 max-w-4xl mx-auto">
       {errorOperacion && (
         <p role="alert" className="mb-4 rounded-md border border-red-800/50 bg-red-950/40 px-3 py-2 text-xs text-red-300">
           {errorOperacion}
         </p>
       )}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
             <h1 className="font-display text-2xl text-[var(--foreground)]">Usuarios</h1>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">Gestión de accesos y permisos</p>
           </div>
-          <button onClick={() => setModal({ tipo: "nuevo", data: { ...EMPTY } })} className="btn-primary flex items-center gap-2">
+          <button onClick={() => setModal({ tipo: "nuevo", data: { ...EMPTY } })} className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
             Nuevo usuario
           </button>
@@ -269,14 +269,14 @@ export default function Usuarios() {
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-5">
-          <div className="flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
+          <div className="max-w-full overflow-x-auto flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
             {(["todos", "gerente", "vendedor"] as const).map((r) => (
               <button key={r} onClick={() => setFiltroRol(r)} className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${filtroRol === r ? "bg-[var(--card)] text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}`}>
                 {r}
               </button>
             ))}
           </div>
-          <div className="flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
+          <div className="max-w-full overflow-x-auto flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
             {(["todas", "sucursal1", "sucursal2"] as const).map((s) => (
               <button key={s} onClick={() => setFiltroSucursal(s)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${filtroSucursal === s ? "bg-[var(--card)] text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}`}>
                 {s === "todas" ? "Todas" : SUCURSALES[s]}
@@ -286,14 +286,14 @@ export default function Usuarios() {
         </div>
 
         {/* Summary */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-5">
           {[
             { label: "Total usuarios", value: usuarios.length },
             { label: "Gerentes", value: usuarios.filter((u) => u.rol === "gerente").length },
             { label: "Activos", value: usuarios.filter((u) => u.activo).length },
           ].map((s) => (
-            <div key={s.label} className="bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-3 flex items-center justify-between">
-              <span className="text-xs text-[var(--muted-foreground)]">{s.label}</span>
+            <div key={s.label} className="min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+              <span className="text-[11px] sm:text-xs leading-tight text-[var(--muted-foreground)]">{s.label}</span>
               <span className="font-mono-data font-bold text-lg text-[var(--foreground)]">{s.value}</span>
             </div>
           ))}
@@ -332,7 +332,7 @@ export default function Usuarios() {
         {/* User cards */}
         <div className="space-y-2">
           {filtrados.map((u) => (
-            <div key={u.id} className={`bg-[var(--card)] border rounded-xl px-5 py-4 flex items-center gap-4 ${!u.activo ? "opacity-50 border-[var(--border)]" : "border-[var(--border)]"}`}>
+            <div key={u.id} className={`bg-[var(--card)] border rounded-xl px-3 sm:px-5 py-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 ${!u.activo ? "opacity-50 border-[var(--border)]" : "border-[var(--border)]"}`}>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${u.rol === "gerente" ? "bg-[var(--primary)]/20" : "bg-blue-500/20"}`}>
                 <span className={`font-semibold text-sm ${u.rol === "gerente" ? "text-[var(--primary)]" : "text-blue-400"}`}>
                   {u.nombre.charAt(0)}
@@ -355,7 +355,7 @@ export default function Usuarios() {
                 </div>
                 <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{u.email} · {SUCURSALES[u.sucursal]}</p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center justify-end gap-2 shrink-0 w-full sm:w-auto sm:ml-auto">
                 <button
                   onClick={() => handleEnviarPassTemporal(u)}
                   disabled={enviandoTempId === u.id || !u.activo}
@@ -423,7 +423,7 @@ export default function Usuarios() {
         {/* Permissions reference */}
         <div className="mt-6 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
           <h3 className="font-semibold text-[var(--foreground)] mb-4">Referencia de permisos</h3>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
             {[
               {
                 rol: "Gerente",

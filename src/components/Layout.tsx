@@ -5,7 +5,7 @@ import ModalConfigWhatsApp from "./ModalConfigWhatsApp";
 
 
 type NavItem = {
-  id: "dashboard" | "inventario" | "movimientos" | "herramientas" | "reportes" | "usuarios" | "respaldo" | "ayuda";
+  id: "dashboard" | "inventario" | "movimientos" | "herramientas" | "reportes" | "usuarios" | "desarrolladores" | "respaldo" | "ayuda";
   label: string;
   icon: React.ReactNode;
   soloGerente?: boolean;
@@ -65,6 +65,15 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    id: "desarrolladores",
+    label: "Desarrolladores",
+    icon: (
+      <svg viewBox="0 0 20 20" fill="currentColor" className="w-4.5 h-4.5">
+        <path d="M7 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm6 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM1.5 16.25a4.75 4.75 0 0 1 9.5 0v.25h-9.5v-.25Zm8 0a4.75 4.75 0 0 1 9.5 0v.25h-9.5v-.25Z" />
+      </svg>
+    ),
+  },
+  {
     id: "usuarios",
     label: "Usuarios",
     icon: (
@@ -108,7 +117,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [modalWhatsAppOpen, setModalWhatsAppOpen] = useState(false);
-  const [modalPassVoluntario, setModalPassVoluntario] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -146,11 +154,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="p-1.5 rounded-md text-[var(--foreground)] hover:bg-[var(--secondary)] transition-colors"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--primary)]/20 bg-[var(--primary)]/10 text-[var(--primary)] shadow-sm transition duration-200 hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/15 active:scale-95"
             aria-label="Abrir menú"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="menu-principal"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
             </svg>
           </button>
           <div className="flex items-center gap-2">
@@ -180,6 +190,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className={`w-2 h-2 rounded-full ${enLinea ? "bg-emerald-400" : "bg-amber-300"}`} />
             {cambiosPendientes > 0 && <span>{cambiosPendientes}</span>}
           </button>
+          {esGerente && (
           <button
             onClick={() => setModalWhatsAppOpen(true)}
             title={
@@ -199,17 +210,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               }`}
             />
           </button>
-
-          <button
-            onClick={() => setModalPassVoluntario(true)}
-            title="Cambiar mi contraseña"
-            className="p-1.5 rounded-md hover:bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-sky-400 transition-colors"
-            aria-label="Cambiar mi contraseña"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-              <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
-            </svg>
-          </button>
+          )}
 
           <button
             onClick={toggleTema}
@@ -233,27 +234,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {mobileMenuOpen && (
         <div
           onClick={() => setMobileMenuOpen(false)}
-          className="fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] transition-opacity md:hidden"
         />
       )}
 
       {/* Sidebar */}
       <aside
+        id="menu-principal"
         className={`
           fixed md:static inset-y-0 left-0 z-50
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-          w-64 ${sidebarOpen ? "md:w-56" : "md:w-14"}
-          bg-[var(--card)] border-r border-[var(--border)]
-          flex flex-col h-full transition-all duration-200 ease-in-out shrink-0 overflow-hidden
+          w-[min(20rem,85vw)] ${sidebarOpen ? "md:w-56" : "md:w-14"}
+          bg-[var(--card)] border-r border-[var(--border)] shadow-2xl md:shadow-none
+          flex flex-col h-full transition-all duration-300 ease-in-out shrink-0 overflow-hidden
         `}
       >
         {/* Header del Sidebar */}
-        <div className="h-14 flex items-center px-3 border-b border-[var(--border)] shrink-0 justify-between">
+        <div className="h-16 flex items-center px-4 border-b border-[var(--border)] shrink-0 justify-between bg-gradient-to-r from-[var(--primary)]/5 to-transparent md:h-14 md:px-3">
           <div className={`flex items-center gap-2 min-w-0 ${!sidebarOpen ? "md:hidden" : ""}`}>
             <img
               src="/logo.jpeg"
               alt="Genesis"
-              className="h-8 w-8 object-contain shrink-0 rounded-md"
+              className="h-9 w-9 object-contain shrink-0 rounded-lg md:h-8 md:w-8"
             />
             <div className="flex flex-col min-w-0 leading-tight">
               <span className="font-bold text-sm text-[var(--foreground)] truncate uppercase tracking-wide">
@@ -287,9 +289,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Botón cerrar (Móvil) */}
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--secondary)] ml-auto"
+            aria-label="Cerrar menú"
+            className="md:hidden ml-auto flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] text-[var(--muted-foreground)] transition hover:bg-[var(--secondary)] hover:text-[var(--foreground)]"
           >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
@@ -309,14 +312,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-4 md:space-y-0.5 md:px-2 md:py-3">
           {items.map((item) => {
             const active = vistaActual === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => handleSeleccionarVista(item.id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors relative ${
+                className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors md:gap-2.5 md:rounded-md md:px-2.5 md:py-2 ${
                   active
                     ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
                     : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)]"
@@ -339,7 +342,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               onClick={() => handleSeleccionarVista("ayuda")}
               title="Centro de ayuda"
               aria-label="Abrir centro de ayuda"
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors relative ${
+              className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors md:gap-2.5 md:rounded-md md:px-2.5 md:py-2 ${
                 vistaActual === "ayuda"
                   ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
                   : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)]"
@@ -398,12 +401,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </button>
           )}
           {/* Botón de Configuración de WhatsApp */}
+          {esGerente && (
           <button
             onClick={() => setModalWhatsAppOpen(true)}
             className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium bg-[var(--secondary)] border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors ${
               !sidebarOpen ? "md:justify-center" : ""
             }`}
-            title="Configurar Alertas de WhatsApp por Stock Cero"
+            title="Configurar alertas de WhatsApp por stock bajo o agotado"
           >
             <div className="flex items-center gap-2 min-w-0">
               <div className="relative shrink-0 flex items-center justify-center">
@@ -432,6 +436,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </span>
             )}
           </button>
+          )}
 
          
 
@@ -467,16 +472,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <p className="text-xs font-medium text-[var(--foreground)] truncate">{usuarioActual.nombre}</p>
               <p className="text-[10px] text-[var(--muted-foreground)] capitalize">{usuarioActual.rol}</p>
             </div>
-            {/* Botón de Cambiar Contraseña */}
-            <button
-              onClick={() => setModalPassVoluntario(true)}
-              title="Cambiar mi contraseña"
-              className="p-1 rounded-md hover:bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-sky-400 transition-colors"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
-              </svg>
-            </button>
             {/* Botón de Cerrar Sesión */}
             <button
               onClick={logout}
@@ -493,15 +488,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {!sidebarOpen && (
             <div className="hidden md:flex flex-col gap-1 w-full">
               <button
-                onClick={() => setModalPassVoluntario(true)}
-                title="Cambiar contraseña"
-                className="w-full flex justify-center p-2 rounded-md hover:bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-sky-400 transition-colors"
-              >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
                 onClick={logout}
                 title="Cerrar sesión"
                 className="w-full flex justify-center p-2 rounded-md hover:bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-red-400 transition-colors"
@@ -517,7 +503,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Contenido Principal */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto w-full p-4 md:p-6">
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto w-full p-0">
         <div className="flex-1 flex flex-col min-w-0">
           {children}
         </div>
@@ -527,12 +513,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Modal de Configuración de WhatsApp */}
-      <ModalConfigWhatsApp
-        isOpen={modalWhatsAppOpen}
-        onClose={() => setModalWhatsAppOpen(false)}
-        configActual={whatsAppConfig}
-        onGuardar={actualizarWhatsAppConfig}
-      />
+      {esGerente && (
+        <ModalConfigWhatsApp
+          isOpen={modalWhatsAppOpen}
+          onClose={() => setModalWhatsAppOpen(false)}
+          configActual={whatsAppConfig}
+          onGuardar={actualizarWhatsAppConfig}
+        />
+      )}
 
     </div>
   );

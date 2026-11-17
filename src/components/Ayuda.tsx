@@ -1,9 +1,9 @@
 export default function Ayuda() {
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto p-6">
-        <header className="mb-8">
-          <h1 className="font-display text-2xl text-[var(--foreground)]">Centro de ayuda</h1>
+      <div className="max-w-5xl mx-auto px-3 py-4 sm:p-6">
+        <header className="mb-6 sm:mb-8">
+          <h1 className="font-display text-xl sm:text-2xl text-[var(--foreground)]">Centro de ayuda</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-1">
             Videos, guías y otros recursos para usar el sistema.
           </p>
@@ -14,7 +14,7 @@ export default function Ayuda() {
             <h2 className="text-base font-semibold text-[var(--foreground)]">Videos de ayuda</h2>
             <span className="text-xs text-[var(--muted-foreground)]">Tutoriales y demostraciones</span>
           </div>
-          <div className="min-h-52 flex flex-col items-center justify-center text-center px-6 py-10 border border-dashed border-[var(--border)] rounded-md">
+          <div className="min-h-52 flex flex-col items-center justify-center text-center px-4 sm:px-6 py-8 sm:py-10 border border-dashed border-[var(--border)] rounded-md">
             <div className="w-11 h-11 flex items-center justify-center rounded-full bg-[var(--secondary)] text-[var(--muted-foreground)] mb-3">
               <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                 <path d="M4.25 3.5A1.75 1.75 0 0 0 2.5 5.25v9.5c0 .966.784 1.75 1.75 1.75h11.5a1.75 1.75 0 0 0 1.75-1.75v-9.5a1.75 1.75 0 0 0-1.75-1.75H4.25ZM8 7.22c0-.57.62-.93 1.12-.65l4.6 2.56a.75.75 0 0 1 0 1.31l-4.6 2.56A.75.75 0 0 1 8 12.35V7.22Z" />

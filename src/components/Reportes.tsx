@@ -490,24 +490,24 @@ export default function Reportes() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="p-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-5">
+      <div className="px-3 py-4 sm:p-6 max-w-6xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <h1 className="font-display text-2xl text-[var(--foreground)]">Reportes</h1>
+            <h1 className="font-display text-xl sm:text-2xl text-[var(--foreground)]">Reportes</h1>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
               Alertas de stock y análisis de inventario
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
             {/* Filtro de sucursal */}
             {esGerente && (
-              <div className="flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
+              <div className="max-w-full overflow-x-auto flex gap-1 bg-[var(--secondary)] p-1 rounded-lg">
                 {(["todas", "sucursal1", "sucursal2"] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setSucursalFiltro(s)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                       sucursalFiltro === s
                         ? "bg-[var(--card)] text-[var(--foreground)]"
                         : "text-[var(--muted-foreground)]"
@@ -526,7 +526,7 @@ export default function Reportes() {
               onClick={handleGenerarPDF}
               disabled={generando}
               className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+              flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold
                 transition-all duration-200 select-none border
                 ${
                   generando
@@ -568,7 +568,7 @@ export default function Reportes() {
 
         {/* Info badge semana — solo visible para gerente */}
         {esGerente && (
-          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-yellow-400/5 border border-yellow-500/25 w-fit">
+          <div           className="flex items-start sm:items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-yellow-400/5 border border-yellow-500/25 w-fit max-w-full">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-yellow-400 shrink-0">
               <path
                 fillRule="evenodd"
@@ -601,7 +601,7 @@ export default function Reportes() {
               {agotados.map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between py-1.5 border-t border-red-800/20"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 border-t border-red-800/20"
                 >
                   <div>
                     <p className="text-sm font-medium text-[var(--foreground)]">{r.nombre}</p>
@@ -645,7 +645,7 @@ export default function Reportes() {
                 return (
                   <div
                     key={r.id}
-                    className="flex items-center gap-3 py-1.5 border-t border-yellow-800/20"
+                    className="flex items-center gap-3 py-2 border-t border-yellow-800/20"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[var(--foreground)] truncate">
@@ -816,7 +816,7 @@ export default function Reportes() {
             <p className="text-sm text-[var(--muted-foreground)] text-center py-6">Sin datos.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[520px] text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
                     {[

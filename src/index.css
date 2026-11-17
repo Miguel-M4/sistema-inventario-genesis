@@ -115,6 +115,10 @@ body {
   transition: border-color 0.15s;
 }
 
+.input-field.input-field-with-icon {
+  padding-left: 2.5rem;
+}
+
 .input-field:focus {
   border-color: var(--primary);
 }

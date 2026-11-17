@@ -11,7 +11,7 @@ import type {
 import {
   getWhatsAppConfig,
   saveWhatsAppConfig,
-  enviarAlertaStockCero,
+  enviarAlertaStock,
 } from "./lib/whatsappService";
 import {
   enviarCorreoRecuperacion,
@@ -87,6 +87,7 @@ export type View =
   | "herramientas"
   | "reportes"
   | "usuarios"
+  | "desarrolladores"
   | "respaldo"
   | "ayuda";
 
@@ -896,23 +897,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const editarRepuesto = async (r: Repuesto) => {
     const anterior = repuestos.find((x) => x.id === r.id);
-    if (
-      whatsAppConfig.activo &&
-      anterior &&
-      anterior.existencia > 0 &&
-      r.existencia <= 0
-    ) {
-      enviarAlertaStockCero({
+    if (whatsAppConfig.activo && anterior && anterior.existencia > 0 && r.existencia <= 0) {
+      enviarAlertaStock({
         repuestoNombre: r.nombre,
         repuestoCodigo: r.codigo,
         sucursal: r.sucursal,
         cantidadSalida: anterior.existencia - r.existencia,
         stockAnterior: anterior.existencia,
         stockResultante: r.existencia,
+        stockMinimo: r.stockMinimo,
         motivo: "Ajuste directo de stock a 0",
         usuarioNombre: usuarioActual?.nombre || "Sistema",
         fecha: new Date().toLocaleString(),
       }).catch((e) => console.warn("Error enviando alerta WhatsApp en edición:", e));
+    } else if (
+      whatsAppConfig.activo &&
+      whatsAppConfig.notificarStockMinimo &&
+      anterior &&
+      anterior.existencia > r.stockMinimo &&
+      r.existencia <= r.stockMinimo &&
+      r.existencia > 0
+    ) {
+      enviarAlertaStock({
+        repuestoNombre: r.nombre,
+        repuestoCodigo: r.codigo,
+        sucursal: r.sucursal,
+        cantidadSalida: anterior.existencia - r.existencia,
+        stockAnterior: anterior.existencia,
+        stockResultante: r.existencia,
+        stockMinimo: r.stockMinimo,
+        motivo: `Ajuste directo: umbral de seguridad alcanzado (${r.stockMinimo} u.)`,
+        usuarioNombre: usuarioActual?.nombre || "Sistema",
+        fecha: new Date().toLocaleString(),
+      }).catch((e) => console.warn("Error enviando alerta WhatsApp de stock mínimo en edición:", e));
     }
 
     await guardarCambioPendiente({ type: "update-part", value: r });
@@ -1018,15 +1035,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     setMovimientos((prev) => [nuevoMovimiento, ...prev]);
 
-    // Alerta automática a WhatsApp cuando el producto se agota (stock llega a 0)
+    // Notificar al agotar el producto o al cruzar su stock mínimo configurado.
     if (whatsAppConfig.activo && stockAnterior > 0 && nuevoStock <= 0) {
-      enviarAlertaStockCero({
+      enviarAlertaStock({
         repuestoNombre: rep.nombre,
         repuestoCodigo: rep.codigo,
         sucursal: rep.sucursal,
         cantidadSalida: cantidad,
         stockAnterior,
         stockResultante: nuevoStock,
+        stockMinimo: rep.stockMinimo,
         motivo,
         folioReferencia,
         usuarioNombre: usuarioActual.nombre,
@@ -1039,13 +1057,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       nuevoStock <= rep.stockMinimo &&
       nuevoStock > 0
     ) {
-      enviarAlertaStockCero({
-        repuestoNombre: `${rep.nombre} (Stock Mínimo Alcanzado)`,
+      enviarAlertaStock({
+        repuestoNombre: rep.nombre,
         repuestoCodigo: rep.codigo,
         sucursal: rep.sucursal,
         cantidadSalida: cantidad,
         stockAnterior,
         stockResultante: nuevoStock,
+        stockMinimo: rep.stockMinimo,
         motivo: `Umbral de seguridad alcanzado (${rep.stockMinimo} u.) - ${motivo}`,
         folioReferencia,
         usuarioNombre: usuarioActual.nombre,

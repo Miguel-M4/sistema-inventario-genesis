@@ -18,15 +18,15 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="group relative bg-gradient-to-br from-[var(--card)] via-[var(--card)] to-[var(--secondary)]/30 border border-[var(--border)] hover:border-[var(--primary)]/40 rounded-xl p-5 shadow-lg transition-all duration-200 hover:-translate-y-0.5">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{label}</span>
-        <div className={`p-2 rounded-lg ${badgeColor} transition-transform group-hover:scale-110 duration-200`}>
+    <div className="group relative min-w-0 bg-gradient-to-br from-[var(--card)] via-[var(--card)] to-[var(--secondary)]/30 border border-[var(--border)] hover:border-[var(--primary)]/40 rounded-xl p-3.5 sm:p-5 shadow-lg transition-all duration-200 hover:-translate-y-0.5">
+      <div className="flex min-w-0 items-center justify-between gap-2 mb-3">
+        <span className="min-w-0 text-[10px] sm:text-xs font-semibold leading-tight text-[var(--muted-foreground)] uppercase tracking-wide sm:tracking-wider">{label}</span>
+        <div className={`shrink-0 p-1.5 sm:p-2 rounded-lg ${badgeColor} transition-transform group-hover:scale-110 duration-200`}>
           {icon}
         </div>
       </div>
       <p className={`text-2xl font-bold font-mono-data tracking-tight ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-[var(--muted-foreground)] mt-1 font-medium">{sub}</p>}
+      {sub && <p className="text-xs leading-snug text-[var(--muted-foreground)] mt-1 font-medium break-words">{sub}</p>}
     </div>
   );
 }
@@ -43,14 +43,14 @@ function SucursalPanel({ sucursal }: { sucursal: Sucursal }) {
   const valorTotal = reps.reduce((acc, r) => acc + r.existencia * r.precioCompra, 0);
 
   return (
-    <div className="bg-gradient-to-br from-[var(--card)] to-[var(--secondary)]/40 border border-[var(--border)] hover:border-[var(--border)]/80 rounded-xl p-5 shadow-md">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
+    <div className="min-w-0 bg-gradient-to-br from-[var(--card)] to-[var(--secondary)]/40 border border-[var(--border)] hover:border-[var(--border)]/80 rounded-xl p-4 sm:p-5 shadow-md">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="flex min-w-0 items-center gap-2.5">
           <div className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--primary)] opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--primary)]"></span>
           </div>
-          <h3 className="font-bold text-[var(--foreground)] text-sm uppercase tracking-wide">{SUCURSALES[sucursal]}</h3>
+          <h3 className="font-bold text-[var(--foreground)] text-xs sm:text-sm uppercase tracking-wide">{SUCURSALES[sucursal]}</h3>
         </div>
         <span className="text-[10px] font-mono-data px-2 py-0.5 rounded-full bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--border)]">
           {reps.length} Repuestos
@@ -82,7 +82,7 @@ function SucursalPanel({ sucursal }: { sucursal: Sucursal }) {
       </div>
       <div className="border-t border-[var(--border)] pt-3 flex items-center justify-between">
         <p className="text-[11px] font-semibold text-[var(--muted-foreground)]">Herramientas asignadas</p>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
             <span className="text-xs font-mono-data text-[var(--foreground)]">{herrs.length - enUso.length} libres</span>
@@ -122,10 +122,10 @@ export default function Dashboard() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="w-full max-w-6xl mx-auto px-3 py-4 sm:p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="font-display text-2xl text-[var(--foreground)]">
+          <h1 className="font-display text-xl sm:text-2xl text-[var(--foreground)]">
             Bienvenido, {usuarioActual.nombre.split(" ")[0]}
           </h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
@@ -134,7 +134,7 @@ export default function Dashboard() {
         </div>
 
         {/* KPI row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
           <StatCard
             label="Total repuestos"
             value={repsVista.length}
@@ -177,8 +177,8 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Bottom row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Branch and stock details */}
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${esGerente ? "" : "md:grid-cols-1"}`}>
           {/* Sucursales overview (gerente only) */}
           {esGerente ? (
             <>
@@ -188,7 +188,7 @@ export default function Dashboard() {
           ) : null}
 
           {/* Alertas recientes */}
-          <div className={`bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 ${esGerente ? "" : "lg:col-span-2"}`}>
+          <div className="min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-[var(--foreground)]">Alertas de stock</h3>
               <button
@@ -233,34 +233,35 @@ export default function Dashboard() {
 
           {/* Recent activity or cross-branch comparison for gerente */}
           {esGerente && (
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+            <div className="min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 sm:p-5">
               <h3 className="font-semibold text-[var(--foreground)] mb-4">Comparativo sucursales</h3>
-              {(["sucursal1", "sucursal2"] as const).map((s) => {
-                const reps = repuestos.filter((r) => r.sucursal === s);
-                const alertasS = reps.filter((r) => r.existencia <= r.stockMinimo).length;
-                const herrs = herramientas.filter((h) => h.sucursal === s);
-                const enUsoS = herrs.filter((h) => h.estado === "en_uso").length;
-                return (
-                  <div key={s} className="mb-4 last:mb-0">
-                    <p className="text-xs font-semibold text-[var(--foreground)] mb-2">{SUCURSALES[s]}</p>
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[var(--muted-foreground)]">Repuestos</span>
-                        <span className="font-mono-data text-[var(--foreground)]">{reps.length}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[var(--muted-foreground)]">Alertas</span>
-                        <span className={`font-mono-data font-semibold ${alertasS > 0 ? "text-red-400" : "text-[var(--success)]"}`}>{alertasS}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[var(--muted-foreground)]">Herr. en uso</span>
-                        <span className="font-mono-data text-[var(--foreground)]">{enUsoS}/{herrs.length}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {(["sucursal1", "sucursal2"] as const).map((s) => {
+                  const reps = repuestos.filter((r) => r.sucursal === s);
+                  const alertasS = reps.filter((r) => r.existencia <= r.stockMinimo).length;
+                  const herrs = herramientas.filter((h) => h.sucursal === s);
+                  const enUsoS = herrs.filter((h) => h.estado === "en_uso").length;
+                  return (
+                    <div key={s} className="min-w-0">
+                      <p className="text-xs font-semibold text-[var(--foreground)] mb-2">{SUCURSALES[s]}</p>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[var(--muted-foreground)]">Repuestos</span>
+                          <span className="font-mono-data text-[var(--foreground)]">{reps.length}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[var(--muted-foreground)]">Alertas</span>
+                          <span className={`font-mono-data font-semibold ${alertasS > 0 ? "text-red-400" : "text-[var(--success)]"}`}>{alertasS}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[var(--muted-foreground)]">Herr. en uso</span>
+                          <span className="font-mono-data text-[var(--foreground)]">{enUsoS}/{herrs.length}</span>
+                        </div>
                       </div>
                     </div>
-                    {s === "sucursal1" && <div className="border-t border-[var(--border)] mt-3" />}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

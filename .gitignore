@@ -10,6 +10,7 @@ vite.config.*.timestamp-*
 logs/
 *.log
 .claude-replay.*
+.AGENTS.md/x
 .tmp-*
 /.plugins/
 /.opencode-skills/

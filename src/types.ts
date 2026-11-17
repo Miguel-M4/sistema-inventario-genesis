@@ -127,6 +127,7 @@ export interface WhatsAppNotificationPayload {
   cantidadSalida: number;
   stockAnterior: number;
   stockResultante: number;
+  stockMinimo: number;
   motivo: string;
   folioReferencia?: string;
   usuarioNombre: string;
