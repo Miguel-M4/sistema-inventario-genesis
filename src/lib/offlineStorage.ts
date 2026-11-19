@@ -99,7 +99,44 @@ export async function loadOfflineSnapshot(userId: string): Promise<OfflineSnapsh
 }
 
 export async function enqueueOfflineChange(change: OfflineChange): Promise<void> {
-  await withStore(CHANGES, "readwrite", (store) => store.put(change));
+  const database = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(CHANGES, "readwrite");
+    const store = transaction.objectStore(CHANGES);
+
+    if (change.type === "update-tool" || change.type === "delete-tool") {
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const pendingChanges = request.result as OfflineChange[];
+        for (const pending of pendingChanges) {
+          if (
+            pending.userId === change.userId &&
+            pending.type === "update-tool" &&
+            pending.value.id === change.value.id
+          ) {
+            store.delete(pending.id);
+          }
+        }
+        store.put(change);
+      };
+      request.onerror = () => transaction.abort();
+    } else {
+      store.put(change);
+    }
+
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error ?? new Error("No se pudo guardar el cambio pendiente."));
+    };
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error ?? new Error("Se canceló el cambio pendiente."));
+    };
+  });
 }
 
 export async function loadOfflineChanges(userId: string): Promise<OfflineChange[]> {

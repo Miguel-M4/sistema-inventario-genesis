@@ -121,34 +121,6 @@ export default function ModalConfigWhatsApp({
             </label>
           </div>
 
-          {/* Guía de configuración de UltraMsg */}
-          <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-semibold text-blue-200">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-blue-400">
-                <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clipRule="evenodd" />
-              </svg>
-              <span>Configura UltraMsg:</span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-blue-300/90">
-              1. Crea una instancia en{" "}
-              <a
-                href="https://ultramsg.com"
-                target="_blank"
-                rel="noreferrer"
-                className="underline font-semibold hover:text-white"
-              >
-                UltraMsg
-              </a>
-              {" "}y escanea el QR hasta que la instancia aparezca autenticada.<br />
-              2. En Supabase, guarda <strong>Instance ID</strong> y <strong>Token</strong> como secretos: <code>ULTRAMSG_INSTANCE_ID</code> y <code>ULTRAMSG_TOKEN</code>.<br />
-              3. Despliega la función <code>whatsapp-send</code>.
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-            No pegues las credenciales de UltraMsg aquí. Guárdalas únicamente como secretos en Supabase.
-          </div>
-
           <div className="space-y-2">
             <label className="text-xs font-semibold text-[var(--foreground)]">
               Tipo de Destinatario

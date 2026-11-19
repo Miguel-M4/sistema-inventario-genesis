@@ -986,6 +986,7 @@ export async function dbFetchHerramientas(): Promise<Herramienta[]> {
     categoria: row.categoria,
     sucursal: mapSucursalId(row.sucursal_id),
     estado: row.estado,
+    precio: Number(row.precio ?? 0),
     notas: row.notas || undefined,
   }));
 }
@@ -1001,6 +1002,7 @@ export async function dbCrearHerramienta(h: Omit<Herramienta, "id">): Promise<st
       nombre: h.nombre,
       categoria: h.categoria,
       estado: h.estado,
+      precio: h.precio ?? 0,
       notas: h.notas || null,
     })
     .select("id")
@@ -1026,11 +1028,16 @@ export async function dbActualizarHerramienta(h: Herramienta): Promise<boolean> 
       nombre: h.nombre,
       categoria: h.categoria,
       estado: h.estado,
+      precio: h.precio ?? 0,
       notas: h.notas || null,
     })
     .eq("id", numId);
 
-  return !error;
+  if (error) {
+    console.error("Error actualizando herramienta:", error);
+    throw error;
+  }
+  return true;
 }
 
 export async function dbEliminarHerramienta(id: string): Promise<boolean> {
